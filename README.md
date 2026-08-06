@@ -2,7 +2,7 @@
 
 A generic **blind boolean-based LDAP injection** exploitation/extraction tool for authorized penetration testing.
 
-It targets endpoints where a request parameter is concatenated unsanitized into an LDAP filter, and the application's response differs detectably between a TRUE and a FALSE condition — a classic boolean oracle. Everything target-specific (which field is injectable, the TRUE/FALSE response markers, how a rotating CSRF/antiforgery token gets refreshed) is supplied via flags. Nothing about any specific target is hardcoded.
+It targets endpoints where a request parameter is concatenated unsanitized into an LDAP filter, and the application's response differs detectably between a TRUE and a FALSE condition a classic boolean oracle. Everything target-specific (which field is injectable, the TRUE/FALSE response markers, how a rotating CSRF/antiforgery token gets refreshed) is supplied via flags. Nothing about any specific target is hardcoded.
 
 > **Authorized use only.** Only run this against systems you own or are explicitly authorized to test (e.g. a signed pentest engagement or bug bounty program in scope). Unauthorized use against systems you don't have permission to test is illegal.
 
@@ -15,7 +15,7 @@ Boolean-based blind LDAP injection works by injecting a payload that closes out 
 *)(!(objectClass=*)     <- always FALSE
 ```
 
-If the app's response differs between these two (different text, different status code, different redirect — whatever you can detect), you have an oracle: a single bit of information per request. Chaining many such requests lets you:
+If the app's response differs between these two (different text, different status code, different redirect whatever you can detect), you have an oracle: a single bit of information per request. Chaining many such requests lets you:
 
 - Confirm the injection is real (`--confirm`)
 - Brute-force attribute values character-by-character (`--extract`)
@@ -38,7 +38,7 @@ Python 3.8+.
 
 ### 1. Capture a request
 
-Using Burp (or any intercepting proxy), capture the vulnerable request and save it raw ("Copy to file" / "Save item"). Replace the vulnerable parameter's value with `{{INJECT}}`, and — if the app rotates a CSRF token — replace that field's value with `{{TOKEN}}`:
+Using Burp (or any intercepting proxy), capture the vulnerable request and save it raw ("Copy to file" / "Save item"). Replace the vulnerable parameter's value with `{{INJECT}}`, and — if the app rotates a CSRF token replace that field's value with `{{TOKEN}}`:
 
 ```
 POST /path/to/vulnerable/form HTTP/1.1
@@ -78,7 +78,7 @@ python3 ldap_blind_extract.py --request-file request.txt \
     --concurrency 8
 ```
 
-This does a breadth-first character-by-character brute force (not greedy — it tracks every prefix still consistent with the oracle, so it doesn't silently jump between two directory entries that share a prefix), and prints every confirmed complete value it finds.
+This does a breadth-first character-by-character brute force (not greedy it tracks every prefix still consistent with the oracle, so it doesn't silently jump between two directory entries that share a prefix), and prints every confirmed complete value it finds.
 
 Speed things up with `--concurrency N`: each lane gets its own cookie jar + token and paces itself independently with `--delay`, so raising this is the main lever for extraction speed without hitting the target any harder per-connection.
 
@@ -134,6 +134,6 @@ This is the most common snag, and it's almost never the injection itself — it'
 2. **Check for more than one TRUE message.** Many apps have several distinct true-condition responses (e.g. "account disabled" vs. "confirmation sent" vs. "unable to send confirmation" are all different TRUE outcomes on some targets). `--true-marker` is repeatable — pass it multiple times rather than assuming one string covers every case. Watch for one marker being a substring of another (e.g. a FALSE message that contains a TRUE message as a prefix); the tool checks all `--false-marker`s before any `--true-marker`, so order your marker choices with that precedence in mind.
 3. **Use `--diag --attr <name> --known-value <value you know is correct>`** to isolate whether it's the attribute, the value, or wildcard syntax causing the anomaly — it runs exact-equality, full-value prefix, first-char prefix, and a negative control in sequence.
 4. **Use `--anchor-diag`** to check whether an anchor value uniquely pins one entry before trusting anything pulled through it.
-5. **Use `--dump-responses <dir>`** to write every full raw response to disk (tagged true/false/anomaly, numbered) and diff a working response against a failing one by hand. Response snippets printed to the terminal are truncated to 300 characters, which is often just boilerplate (`<head>`, favicons) — the actual differentiating text can be well past that cutoff.
+5. **Use `--dump-responses <dir>`** to write every full raw response to disk (tagged true/false/anomaly, numbered) and diff a working response against a failing one by hand. Response snippets printed to the terminal are truncated to 300 characters, which is often just boilerplate (`<head>`, favicons) the actual differentiating text can be well past that cutoff.
 6. **If failures are inconsistent for identically-shaped payloads** (not tied to specific content), it's more likely infrastructure noise (rate limiting, a load-balanced backend) than a real marker problem — raise `--retries` rather than chasing payload content further.
-7. **Remember `--diag`/`--anchor-diag` without `--anchor-attr` query the whole directory**, not one entry — a "should be FALSE" sanity check can legitimately come back TRUE if some other real entry happens to match. That's expected on any directory with more than a handful of entries, not a bug; anchor your real extraction runs with `--anchor-attr`/`--anchor-value` to avoid it.
+7. **Remember `--diag`/`--anchor-diag` without `--anchor-attr` query the whole directory**, not one entry a "should be FALSE" sanity check can legitimately come back TRUE if some other real entry happens to match. That's expected on any directory with more than a handful of entries, not a bug; anchor your real extraction runs with `--anchor-attr`/`--anchor-value` to avoid it.
