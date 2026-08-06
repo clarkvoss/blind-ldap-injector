@@ -1,4 +1,4 @@
-# blind-ldap-injector
+# Blind LDAP Injector
 
 A generic **blind boolean-based LDAP injection** exploitation/extraction tool for authorized penetration testing.
 
